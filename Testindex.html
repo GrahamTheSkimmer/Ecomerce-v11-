@@ -1,0 +1,249 @@
+<html><head>
+    <title>E-commerce Store with Stripe</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        #tabs {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #tabs button {
+            padding: 10px;
+            margin: 0 5px;
+            border: 1px solid #333;
+            background-color: #f0f0f0;
+            cursor: pointer;
+        }
+        #tabs button:hover {
+            background-color: #e0e0e0;
+        }
+        #home, #products, #cart {
+            display: none;
+        }
+        #product-list {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .product-item {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px;
+            text-align: center;
+            cursor: pointer;
+            width: 200px;
+        }
+        .product-item:hover {
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+        }
+        .product-item img {
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .selected {
+            background-color: #c5e1a5;
+        }
+        #cart-list {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 20px 0;
+        }
+        #checkout-button {
+            display: none;
+            padding: 10px;
+            margin: 20px auto;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        .added-to-cart {
+            animation-name: addedToCartAnimation;
+            animation-duration: 0.5s;
+        }
+        @keyframes addedToCartAnimation {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        .product-item {
+            position: relative;
+        }
+        .product-item.added-to-cart::after {
+            content: '';
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            background-image: url("https://via.placeholder.com/150");
+            background-size: cover;
+            background-repeat: no-repeat;
+            transition: transform 1s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome to Our Store</h1>
+    
+    <div id="tabs">
+        <button onclick="showTab('home')">Home</button>
+        <button onclick="showTab('products')">Products</button>
+        <button onclick="showTab('cart')">Cart</button>
+    </div>
+    
+    <div id="home" style="display: none;">
+        <!-- Home tab content -->
+        <p>This is the Home page</p>
+    </div>
+    
+    <div id="products" style="display: block;">
+        <!-- Products tab content -->
+        <h2>Our Products</h2>
+        <div id="product-list"></div>
+        <div id="product-details"></div>
+    </div>
+    
+    <div id="cart" style="display: none;">
+        <!-- Cart tab content -->
+        <h2>Your Cart</h2>
+        <div id="cart-list">Your cart is empty</div>
+        <button id="checkout-button" style="display: none;">Checkout</button>
+    </div>
+
+    <script>
+        const products = [
+            { id: 1, name: "Product 1", price: 1999, image: "https://via.placeholder.com/150" },
+            { id: 2, name: "Product 2", price: 2499, image: "https://via.placeholder.com/150" },
+            { id: 3, name: "Product 3", price: 2999, image: "https://via.placeholder.com/150" }
+        ];
+
+        let cartItems = [];
+
+        function createProductItem(product) {
+            const productDiv = document.createElement('div');
+            productDiv.classList.add('product-item');
+            productDiv.setAttribute('data-product-id', product.id);
+            productDiv.innerHTML = `
+                <div class="product-info">
+                    <img src="${product.image}" alt="${product.name}">
+                    <p>${product.name} - $${(product.price / 100).toFixed(2)}</p>
+                    <button onclick="showProductDetails(${product.id})">View Details</button>
+                </div>
+            `;
+            return productDiv;
+        }
+
+        function showProductDetails(productId) {
+            const productDetails = document.getElementById('product-details');
+            productDetails.innerHTML = '';
+
+            const product = products.find(prod => prod.id === productId);
+
+            const productDetailDiv = document.createElement('div');
+            productDetailDiv.classList.add('product-detail');
+            productDetailDiv.innerHTML = `
+                <h3>${product.name}</h3>
+                <p>Product description goes here.</p>
+                <label for="size_${product.id}">Select Size:</label>
+                <select id="size_${product.id}">
+                    <option value="small">Small</option>
+                    <option value="medium">Medium</option>
+                    <option value="large">Large</option>
+                </select>
+                <button onclick="addToCart(${product.id})">Add to Cart</button>
+            `;
+            productDetails.appendChild(productDetailDiv);
+            productDetails.style.display = 'block';
+        }
+
+        function addToCart(productId) {
+            const selectedSize = document.getElementById(`size_${productId}`).value;
+            const selectedProduct = products.find(prod => prod.id === productId);
+
+            cartItems.push({ ...selectedProduct, size: selectedSize });
+            updateCartDisplay();
+
+            const productDiv = document.querySelector(`[data-product-id="${productId}"]`);
+            productDiv.classList.add('added-to-cart');
+            
+            setTimeout(() => {
+                const cartList = document.getElementById('cart-list');
+                const newItem = document.createElement('div');
+                newItem.classList.add('cart-item');
+                newItem.innerHTML = `<p>${selectedProduct.name} - Size: ${selectedSize}</p>`;
+                cartList.appendChild(newItem);
+
+                const cartRect = cartList.getBoundingClientRect();
+                const productRect = productDiv.getBoundingClientRect();
+                const productImage = productDiv.querySelector('img');
+                
+                productImage.style.position = 'absolute';
+                productImage.style.top = productRect.top + 'px';
+                productImage.style.left = productRect.left + 'px';
+                productImage.style.width = productRect.width + 'px';
+                productImage.style.height = productRect.height + 'px';
+
+                productImage.style.transition = 'transform 1s ease-in-out';
+                productImage.style.transform = `translate(${cartRect.left - productRect.left}px, ${cartRect.top - productRect.top}px)`;
+                productImage.style.opacity = 0;
+
+                setTimeout(() => {
+                    productDiv.classList.remove('added-to-cart');
+                    productImage.style.position = 'static';
+                    productImage.style.transition = '';
+                    productImage.style.transform = '';
+                    productImage.style.opacity = 1;
+                }, 1000);
+            }, 1000);
+        }
+
+        function updateCartDisplay() {
+            const cartList = document.getElementById('cart-list');
+            cartList.innerHTML = '';
+
+            if (cartItems.length === 0) {
+                cartList.innerHTML = 'Your cart is empty';
+            } else {
+                cartItems.forEach(item => {
+                    const cartItem = document.createElement('div');
+                    cartItem.innerHTML = `<p>${item.name} - Size: ${item.size}</p>`;
+                    cartList.appendChild(cartItem);
+                });
+            }
+        }
+
+        function displayProducts() {
+            const productList = document.getElementById('product-list');
+            productList.innerHTML = '';
+
+            products.forEach(product => {
+                const productDiv = createProductItem(product);
+                productList.appendChild(productDiv);
+            });
+        }
+
+        function showTab(tabName) {
+            const tabs = ['home', 'products', 'cart'];
+            tabs.forEach(tab => {
+                document.getElementById(tab).style.display = 'none';
+            });
+            document.getElementById(tabName).style.display = 'block';
+
+            if (tabName === 'products') {
+                displayProducts();
+            }
+        }
+
+        showTab('home');
+    </script>
+</body>
+</html>
